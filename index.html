@@ -132,7 +132,7 @@ tr.grupo td{background:var(--panel-2);font-family:var(--display);font-weight:600
 tbody tr:last-child td{border-bottom:0}
 td.der,th.der{text-align:right}
 .calor{min-width:640px}
-.calor td.c{padding:4px;text-align:center}
+.calor td.c{padding:4px;text-align:center;min-width:64px}
 .celda{display:block;border-radius:5px;padding:6px 2px;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);cursor:default;transition:transform .15s}
 .celda:hover{transform:scale(1.08)}
 .celda.na{background:repeating-linear-gradient(45deg,var(--na) 0 4px,transparent 4px 8px);color:var(--ink-3);font-weight:500}
@@ -246,7 +246,7 @@ footer p{margin:0 0 5px}
     <section class="bloque" aria-labelledby="t-calor">
       <div class="cab-sec">
         <div><p class="eti">Mapa de calor</p><h2 id="t-calor">Los 28 indicadores, mes a mes</h2>
-        <p>Logro de cada indicador (resultado ponderado ÷ ponderación). Verde desde 95 %, ámbar entre 60 % y 95 %, rojo bajo 60 %. Rayado: no se evalúa ese mes.</p></div>
+        <p>Valor real de cada indicador, mes a mes; la columna Año es el promedio de los meses evaluados. El color indica el logro contra la meta: verde desde 95 %, ámbar entre 60 % y 95 %, rojo bajo 60 %. Rayado: no se evalúa ese mes.</p></div>
       </div>
       <div class="caja-tabla"><table class="calor" id="calor"></table></div>
     </section>
@@ -519,18 +519,19 @@ function pintarCalor(){
     const gr=el('tr',{class:'grupo'});const td=el('td',{colspan:ms.length+2});td.append(el('span',{style:`display:inline-block;width:9px;height:9px;border-radius:2px;background:var(${fo.c});margin-right:8px`}),fo.nombre);gr.append(td);tb.append(gr);
     KP.filter(k=>k.foco===fo.id).forEach(kp=>{
       const i=KP.indexOf(kp);const r=el('tr');r.append(el('td',{class:'nk',text:kp.nombre}));
-      const vals=[];
-      ms.forEach(m=>{const q=m.k[i];const lg=q[4]&&q[1]?Math.min(1,q[3]/q[1]):null;if(lg!=null)vals.push(lg);r.append(celda(lg,q[4],kp,MESL[m.n-1],q))});
-      r.append(celda(avg(vals),vals.length>0,kp,'Año',null,true));tb.append(r)});
+      const vals=[],reals=[];
+      ms.forEach(m=>{const q=m.k[i];const lg=q[4]&&q[1]?Math.min(1,q[3]/q[1]):null;if(lg!=null){vals.push(lg);if(q[2]!=null)reals.push(q[2])}r.append(celda(lg,q[4],kp,MESL[m.n-1],q,false,q[2]))});
+      r.append(celda(avg(vals),vals.length>0,kp,'Año',ms[ms.length-1].k[i],true,avg(reals)));tb.append(r)});
   });
   t.append(tb);
-  function celda(lg,inc,kp,mes,q,an){
+  function celda(lg,inc,kp,mes,q,an,real){
     const td=el('td',{class:'c'});const e=inc?est(lg):'na';
-    const s=el('span',{class:'celda'+(e==='na'?' na':''),text:e==='na'?'n/a':Math.round(lg*100)});
+    const s=el('span',{class:'celda'+(e==='na'?' na':''),text:e==='na'?'n/a':realCorto(kp,real)});
     if(e!=='na'){const base=colEst(e);s.style.background=`color-mix(in srgb, ${base} ${e==='ok'?28+lg*30:40}%, var(--panel))`;if(an)s.style.outline=`1.5px solid ${base}`}
-    s.addEventListener('mousemove',ev=>verTip(ev,[el('b',{text:kp.nombre}),fila('Período',mes),fila('Logro',e==='na'?'No se evalúa':pct(lg,0)),...(q?[fila('Real',fmtReal(kp,q[2])),fila('Meta',fmtMeta(kp,q[0]))]:[])]));s.addEventListener('mouseleave',ocultaTip);
+    s.addEventListener('mousemove',ev=>verTip(ev,[el('b',{text:kp.nombre}),fila('Período',mes),fila('Logro',e==='na'?'No se evalúa':pct(lg,0)),fila('Real',fmtReal(kp,real)),fila('Meta',fmtMeta(kp,q?q[0]:kp.meta))]));s.addEventListener('mouseleave',ocultaTip);
     td.append(s);return td}
 }
+const realCorto=(k,r)=>r==null?'—':k.tipo==='int'?r.toLocaleString('es-CL',{maximumFractionDigits:1}):(r*100).toLocaleString('es-CL',{maximumFractionDigits:r<.1?1:0})+'%';
 const fmtMeta=(k,m)=>m==null?'—':k.tipo==='int'?(k.id==='precur'?'0 repeticiones':`≥ ${m} atributos`):m>=1?'100 %':`≥ ${Math.round(m*100)} %`;
 const fmtReal=(k,r)=>r==null?'—':k.tipo==='int'?r.toLocaleString('es-CL',{maximumFractionDigits:1}):pct(r,1);
 
