@@ -10,6 +10,7 @@ Crea: index.html en la raíz del repositorio (la página de GitHub Pages)
 Uso:
     python3 herramientas/actualizar.py "ruta/a/Matriz OKR-KPI 2026 - Centros Salfa Montajes.xlsx"
     python3 herramientas/actualizar.py matriz.xlsx --recalcular   # fuerza recálculo con LibreOffice
+    python3 herramientas/actualizar.py matriz.xlsx --excluir-mes=11  # no publica noviembre (varios: --excluir-mes=10,11)
 
 Requiere: openpyxl (pip install openpyxl). LibreOffice solo si se usa --recalcular
 o si la matriz llega sin valores calculados (por ejemplo, generada por un script).
@@ -92,7 +93,7 @@ def recalcular(origen):
     return os.path.join(tmp, os.path.basename(origen))
 
 
-def leer(ruta):
+def leer(ruta, excluir=()):
     vals = openpyxl.load_workbook(ruta, data_only=True)
     form = openpyxl.load_workbook(ruta)
     faltan = [n for _, n, _ in CENTROS if n not in vals.sheetnames]
@@ -111,6 +112,8 @@ def leer(ruta):
                 continue
             etiqueta = str(ws[f'C{r}'].value)
             n = int(etiqueta.split('.')[0])
+            if n in excluir:
+                continue
             # qué indicadores suma cada foco ese mes (según la fórmula de la pestaña CC-141)
             incluidos = set()
             for col in FOCOS.values():
@@ -139,18 +142,24 @@ def leer(ruta):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    excluir = set()
+    for a in sys.argv[1:]:
+        if a.startswith('--excluir-mes='):
+            excluir |= {int(x) for x in a.split('=', 1)[1].split(',') if x.strip()}
     if len(args) != 1:
         sys.exit(__doc__)
     ruta = args[0]
     if '--recalcular' in sys.argv:
         ruta = recalcular(ruta)
-    datos = leer(ruta)
+    datos = leer(ruta, excluir)
     if not any(m['exc'] is not None for m in datos['centros'][1]['meses']) and '--recalcular' not in sys.argv:
-        datos = leer(recalcular(ruta))
+        datos = leer(recalcular(ruta), excluir)
     plantilla = open(PLANTILLA, encoding='utf-8').read()
     js = json.dumps(datos, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
     open(SALIDA, 'w', encoding='utf-8').write(plantilla.replace('__DATA__', js))
     print(f'index.html actualizado ({datos["generado"]})')
+    if excluir:
+        print('  Meses excluidos (no se publican): ' + ', '.join(str(m) for m in sorted(excluir)))
     for c in datos['centros']:
         if c['meses']:
             meses = ', '.join(f"{m['mes'][:3]} {m['exc'] * 100:.1f}%" for m in c['meses'])
