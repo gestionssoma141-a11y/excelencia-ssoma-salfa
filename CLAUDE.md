@@ -36,10 +36,6 @@ contiene el marcador `__DATA__` donde el script inserta los datos.
 
 ## Revisar al actualizar
 
-- **Noviembre no se publica hasta que el usuario confirme la dotación** (CC-141, celda D15). Mientras
-  tanto, correr el script con `--excluir-mes=11` e informar lo que trae noviembre en la matriz sin
-  publicarlo. Quitar esta regla solo cuando el usuario confirme la dotación.
-
 - En la pestaña CC-141, las celdas AD15 y AQ15 (reportes esperados de LMG Operativa, noviembre) tenían
   números fijos en vez de la fórmula `=F15*4`. Avisar si siguen así cuando se cargue noviembre.
 - Las fórmulas de IAP (columnas DH y DM) dan puntaje completo cuando hay reportes sin cerrar o sin
